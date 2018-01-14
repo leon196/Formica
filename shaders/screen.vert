@@ -1,9 +1,10 @@
 
 #define PI2 3.14159/2.
+#define TAU 3.14159*2.
 
 uniform vec2 uResolution, uPaintingResolution;
 uniform vec2 uPosition;
-uniform float uRotation;
+uniform float uRotation, uScale, uPlayerWin;
 
 varying vec2 vUv;
 
@@ -18,10 +19,12 @@ void main(void)
 	
 	vec2 p = uv;
 	p -= uPosition / uPaintingResolution;
-	p *= rot(uRotation-PI2);
+	p *= rot(mix(mod(uRotation-PI2, TAU), 0., uPlayerWin));
 	p.x *= uResolution.y/uResolution.x;
 	p.x *= uPaintingResolution.x/uPaintingResolution.y;
-	p *= 10.;
+	p *= mix(uScale, 1.5, uPlayerWin);
+
+
 
 	gl_Position = vec4( p, 0.9, 1 );
 }

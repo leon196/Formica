@@ -9,10 +9,27 @@ window.onload = function () {
 	let buffer = {};
 	let rotation = PI2;
 	let position = [0,0];
+	let lastPosition = [0,0];
 	let rotationSpeed = .01;
 	let positionSpeed = 4;
 	let frameElapsed = 0;
+	let playerWin = false;
 	let frameBuffer;
+
+	let paintingScale = 10.;
+	let winArea = 300;
+	let winDamping = .003;
+	let jumpHeight = 10;
+	let jumpDamping = .1;
+	let distanceTotal = 0;
+	let currentPainting = 0;
+	let paintings = [
+		{
+			name:'painting1',
+			url:'image/image_1534.jpeg',
+			win: { x: 1500, y: 1900 },
+		},
+	];
 
 	let renderer = new THREE.WebGLRenderer();
 	renderer.setSize( window.innerWidth, window.innerHeight );
@@ -25,8 +42,11 @@ window.onload = function () {
 	let textureLoaded = 0;
 	let textureUrls = [
 		{ name:'sprite', url:'image/ant.png' },
-		{ name:'painting1', url:'image/image_1534.jpeg' },
+		{ name:'win', url:'image/what.png' },
 	];
+	paintings.forEach(item => {
+		textureUrls.push(item);
+	});
 	let textureCount = textureUrls.length;
 	textureUrls.forEach(item => {
 		textureLoader.load(item.url, data => loadedTexture(item.name, data));
@@ -47,7 +67,8 @@ window.onload = function () {
 	let shaderCount = shaderUrls.length;
 	shaderUrls.forEach(item => {
 		shaderLoader.load(item.url, data => loadedShader(item.name, data));
-	})
+	});
+	let uniforms;
 
 	function loadedTexture (key, data) {
 		textures[key] = data;
@@ -63,14 +84,50 @@ window.onload = function () {
 		}
 	}
 
+	function lerp(v0, v1, t) {
+		return v0*(1-t)+v1*t;
+	}
+
+	function setupLevel () {
+		distanceTotal = 0;
+		position[0] = 0;
+		position[1] = 0;
+		lastPosition[0] = 0;
+		lastPosition[1] = 0;
+		uRotation = Math.PI/2.;
+
+		let key = paintings[currentPainting].name;
+		uniforms.uPainting.value = textures[key];
+		uniforms.uPaintingResolution.value[0] = textures[key].image.width;
+		uniforms.uPaintingResolution.value[1] = textures[key].image.height;
+		uniforms.uWinPosition.value[0] = paintings[currentPainting].win.x;
+		uniforms.uWinPosition.value[1] = paintings[currentPainting].win.y;
+	}
+
 	function setup () {
+
+		uniforms = {
+			uTime: { value: 0 },
+			uRotation: { value: rotation },
+			uPosition: { value: [0,0] },
+			uWinPosition: { value: [0,0] },
+			uResolution: { value: [window.innerWidth, window.innerHeight] },
+			uSprite: { value: textures.sprite },
+			uWin: { value: textures.win },
+			uPainting: { value: 0 },
+			uPaintingResolution: { value: [0, 0] },
+			uBuffer: { value: 0 },
+			uClear: { value: 0 },
+			uPlayerWin: { value: 0 },
+			uJump: { value: 0 },
+			uDistanceTotal: { value: 0 },
+			uScale: { value: paintingScale },
+		};
+
+		setupLevel();
+
 		sprite.material = new THREE.ShaderMaterial( {
-			uniforms: {
-				uTime: { value: 0 },
-				uRotation: { value: rotation },
-				uResolution: { value: [window.innerWidth, window.innerHeight] },
-				uSprite: { value: textures.sprite },
-			},
+			uniforms: uniforms,
 			vertexShader: shaders['sprite.vert'],
 			fragmentShader: shaders['sprite.frag'],
 			transparent: true,
@@ -79,15 +136,7 @@ window.onload = function () {
 		scene.add(sprite.mesh);
 
 		map.material = new THREE.ShaderMaterial( {
-			uniforms: {
-				uTime: { value: 0 },
-				uRotation: { value: rotation },
-				uPosition: { value: position },
-				uResolution: { value: [window.innerWidth, window.innerHeight] },
-				uPainting: { value: textures.painting1 },
-				uPaintingResolution: { value: [textures.painting1.image.width, textures.painting1.image.height] },
-				uBuffer: { value: 0 },
-			},
+			uniforms: uniforms,
 			vertexShader: shaders['map.vert'],
 			fragmentShader: shaders['map.frag'],
 		});
@@ -95,15 +144,7 @@ window.onload = function () {
 		scene.add(map.mesh);
 
 		screen.material = new THREE.ShaderMaterial( {
-			uniforms: {
-				uTime: { value: 0 },
-				uRotation: { value: rotation },
-				uPosition: { value: position },
-				uResolution: { value: [window.innerWidth, window.innerHeight] },
-				uPainting: { value: textures.painting1 },
-				uPaintingResolution: { value: [textures.painting1.image.width, textures.painting1.image.height] },
-				uBuffer: { value: 0 },
-			},
+			uniforms: uniforms,
 			vertexShader: shaders['screen.vert'],
 			fragmentShader: shaders['screen.frag'],
 		});
@@ -111,15 +152,7 @@ window.onload = function () {
 		scene.add(screen.mesh);
 
 		buffer.material = new THREE.ShaderMaterial( {
-			uniforms: {
-				uTime: { value: 0 },
-				uRotation: { value: rotation },
-				uPosition: { value: [0.02,0] },
-				uResolution: { value: [window.innerWidth, window.innerHeight] },
-				uPainting: { value: textures.painting1 },
-				uPaintingResolution: { value: [textures.painting1.image.width, textures.painting1.image.height] },
-				uBuffer: { value: 0 },
-			},
+			uniforms: uniforms,
 			vertexShader: shaders['buffer.vert'],
 			fragmentShader: shaders['buffer.frag'],
 		});
@@ -138,32 +171,68 @@ window.onload = function () {
 		requestAnimationFrame( update );
 	}
 
-	function update (elapsed) {
-		let delta = Math.max(0, Math.min(1, elapsed - frameElapsed));
-		if (Keyboard.A.down) {
-			rotation -= rotationSpeed * delta;
-		} else if (Keyboard.D.down) {
-			rotation += rotationSpeed * delta;
-		}
-
-		if (Keyboard.W.down) {
-			position[0] -= Math.cos(-rotation) * positionSpeed * delta;
-			position[1] -= Math.sin(-rotation) * positionSpeed * delta;
-		} else if (Keyboard.S.down) {
-			position[0] += Math.cos(-rotation) * positionSpeed * delta;
-			position[1] += Math.sin(-rotation) * positionSpeed * delta;
-		}
-
-		sprite.material.uniforms.uRotation.value = rotation;
-		screen.material.uniforms.uRotation.value = rotation;
-		screen.material.uniforms.uPosition.value = position;
-		buffer.material.uniforms.uPosition.value = position;
-
-		screen.material.uniforms.uBuffer.value = frameBuffer.getTexture();
-		map.material.uniforms.uBuffer.value = frameBuffer.getTexture();
-		buffer.material.uniforms.uBuffer.value = frameBuffer.getTexture();
+	function bufferPass () {
+		uniforms.uBuffer.value = frameBuffer.getTexture();
 		frameBuffer.swap();
 		renderer.render(buffer.mesh, camera, frameBuffer.getRenderTarget(), true);
+	}
+
+	function update (elapsed) {
+		let delta = Math.max(0, Math.min(1, elapsed - frameElapsed));
+
+		uniforms.uTime.value += delta;
+
+		if (playerWin == false) {
+			if (Keyboard.A.down) {
+				rotation -= rotationSpeed * delta;
+			} else if (Keyboard.D.down) {
+				rotation += rotationSpeed * delta;
+			}
+
+			if (Keyboard.W.down) {
+				position[0] -= Math.cos(-rotation) * positionSpeed * delta;
+				position[1] -= Math.sin(-rotation) * positionSpeed * delta;
+			} else if (Keyboard.S.down) {
+				position[0] += Math.cos(-rotation) * positionSpeed * delta;
+				position[1] += Math.sin(-rotation) * positionSpeed * delta;
+			}
+
+			distanceTotal += Math.abs(position[0]-lastPosition[0])+Math.abs(position[1]-lastPosition[1]);
+			lastPosition[0] = position[0];
+			lastPosition[1] = position[1];
+
+			uniforms.uRotation.value = rotation;
+			uniforms.uPosition.value = position;
+			uniforms.uDistanceTotal.value = distanceTotal;
+
+			if (Keyboard.Space.down) {
+				Keyboard.Space.down = false;
+				uniforms.uJump.value = lerp(uniforms.uJump.value, jumpHeight, jumpDamping);
+				uniforms.uJump.value = Math.max(0, Math.min(1, uniforms.uJump.value));
+			} else {
+				uniforms.uJump.value = lerp(uniforms.uJump.value, 0, jumpDamping);
+			}
+		}
+
+		let winPos = paintings[currentPainting].win;
+		if (Math.abs(position[0] - winPos.x) + Math.abs(position[1] - winPos.y) < winArea) {
+			playerWin = true;
+			uniforms.uPlayerWin.value = lerp(uniforms.uPlayerWin.value, 1, delta * winDamping);
+
+		}
+
+		if (uniforms.uPlayerWin.value >= .99) {
+			playerWin = false;
+			uniforms.uTime.value = 0;
+			uniforms.uPlayerWin.value = 0;
+			currentPainting = (currentPainting + 1) % Object.keys(paintings).length;
+			uniforms.uClear.value = 1;
+			bufferPass();	
+			uniforms.uClear.value = 0;
+			setupLevel();
+		}
+
+		bufferPass();
 
 		renderer.render( scene, camera );
 		frameElapsed = elapsed;
