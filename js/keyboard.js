@@ -30,7 +30,7 @@ Keyboard.onKeyDown = function (event)
 
 Keyboard.onKeyUp = function (event)
 {
-	console.log(event.keyCode)
+	// console.log(event.keyCode)
 	for (var propertyName in Keyboard) {
 		if (Keyboard.hasOwnProperty(propertyName) && Keyboard[propertyName] instanceof Key && event.keyCode == Keyboard[propertyName].code) {
 			Keyboard[propertyName].down = false
