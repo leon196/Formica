@@ -14,7 +14,9 @@ void main(void)
    vec4 color = mix(texture2D(uBuffer, vUv), texture2D(uPainting, vUv), smoothstep(.9, 1., uPlayerWin));
    vec2 uv = vUv;
    uv.x *= uPaintingResolution.x/uPaintingResolution.y;
-   uv -= uWinPosition/uPaintingResolution;
+   vec2 winPosition = uWinPosition/uPaintingResolution;
+   winPosition.y = 1.-winPosition.y;
+   uv -= winPosition;
    uv *= 8.;
    uv += .5;
    vec4 win = texture2D(uWin, uv);

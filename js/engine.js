@@ -14,10 +14,10 @@ window.onload = function () {
 	let positionSpeed = 4;
 	let frameElapsed = 0;
 	let playerWin = false;
-	let frameBuffer;
+	let frameBuffer = new FrameBuffer();
 
 	let paintingScale = 10.;
-	let winArea = 300;
+	let winArea = 200;
 	let winDamping = .003;
 	let jumpHeight = 10;
 	let jumpDamping = .1;
@@ -26,8 +26,28 @@ window.onload = function () {
 	let paintings = [
 		{
 			name:'painting1',
-			url:'image/image_1534.jpeg',
-			win: { x: 1500, y: 1900 },
+			url:'image/17-587799.jpg',
+			win: { x: 3093, y: 1158 },
+		},{
+			name:'painting2',
+			url:'image/17-620545.jpg',
+			win: { x: 2255, y: 2388 },
+		},{
+			name:'painting3',
+			url:'image/17-620546.jpg',
+			win: { x: 2864, y: 2341 },
+		},{
+			name:'painting4',
+			url:'image/95-011771.jpg',
+			win: { x: 4091, y: 1330 },
+		},{
+			name:'painting5',
+			url:'image/95-020170.jpg',
+			win: { x: 3231, y: 2415 },
+		},{
+			name:'painting6',
+			url:'image/99-005006.jpg',
+			win: { x: 4800, y: 900 },
 		},
 	];
 
@@ -88,6 +108,10 @@ window.onload = function () {
 		return v0*(1-t)+v1*t;
 	}
 
+	function closestPowerOfTwo (num) {
+		return Math.pow(2, Math.ceil(Math.log(num) / Math.log(2)));
+	}
+
 	function setupLevel () {
 		distanceTotal = 0;
 		position[0] = 0;
@@ -97,11 +121,22 @@ window.onload = function () {
 		uRotation = Math.PI/2.;
 
 		let key = paintings[currentPainting].name;
+
+		paintings[currentPainting].width = textures[key].image.width;
+		//closestPowerOfTwo(textures[key].image.width);
+		paintings[currentPainting].height = textures[key].image.height;
+		//closestPowerOfTwo(textures[key].image.height);
+		// console.log(paintings[currentPainting].height);
+		// textures[key].image.width = paintings[currentPainting].width;
+		// textures[key].image.height = paintings[currentPainting].height;
+
 		uniforms.uPainting.value = textures[key];
-		uniforms.uPaintingResolution.value[0] = textures[key].image.width;
-		uniforms.uPaintingResolution.value[1] = textures[key].image.height;
+		uniforms.uPaintingResolution.value[0] = paintings[currentPainting].width;
+		uniforms.uPaintingResolution.value[1] = paintings[currentPainting].height;
 		uniforms.uWinPosition.value[0] = paintings[currentPainting].win.x;
 		uniforms.uWinPosition.value[1] = paintings[currentPainting].win.y;
+
+		frameBuffer.setSize(paintings[currentPainting].width/2, paintings[currentPainting].height/2);
 	}
 
 	function setup () {
@@ -158,11 +193,6 @@ window.onload = function () {
 		});
 		buffer.mesh = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ), buffer.material );
 
-		frameBuffer = new FrameBuffer({
-			width: textures.painting1.image.width,
-			height: textures.painting1.image.height,
-		});
-
 		camera.position.z = 5;
 
 		document.addEventListener('keydown', Keyboard.onKeyDown);
@@ -215,10 +245,10 @@ window.onload = function () {
 		}
 
 		let winPos = paintings[currentPainting].win;
-		if (Math.abs(position[0] - winPos.x) + Math.abs(position[1] - winPos.y) < winArea) {
+		let key = paintings[currentPainting].name;
+		if (Math.abs(position[0] - winPos.x) + Math.abs(position[1] - (paintings[currentPainting].height - winPos.y)) < winArea) {
 			playerWin = true;
 			uniforms.uPlayerWin.value = lerp(uniforms.uPlayerWin.value, 1, delta * winDamping);
-
 		}
 
 		if (uniforms.uPlayerWin.value >= .99) {
