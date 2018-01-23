@@ -25,9 +25,9 @@ void main(void)
 	// angle = rand(uv) * TAU;
 	// uv += vec2(cos(angle),sin(angle))*.01;
 	float dist = length(uPosition/uPaintingResolution-uv);
-	float range = .1+uPlayerWin*.5+ + clamp(uJump,0.,1.) * .1;
+	float range = .01+uPlayerWin*.5;// + clamp(uJump,0.,1.) * .1;
 	float rangeMin = 0. + clamp(uJump,0.,1.) * .09;
 	vec4 color = mix(frame, vec4(vec3(lum),1), (1.-smoothstep(rangeMin,range,dist)) * .05);
-	color = mix(color, paint, (1.-smoothstep(rangeMin,range*.5,dist)) * .05);
+	color = mix(color, vec4(1), (1.-smoothstep(rangeMin,range*.5,dist)) * .05);
 	gl_FragColor = color * (1.-uClear);
 }

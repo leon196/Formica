@@ -16,40 +16,13 @@ window.onload = function () {
 	let playerWin = false;
 	let frameBuffer = new FrameBuffer();
 
-	let paintingScale = 10.;
+	let paintingScale = 20.;
 	let winArea = 200;
 	let winDamping = .003;
 	let jumpHeight = 10;
 	let jumpDamping = .1;
 	let distanceTotal = 0;
 	let currentPainting = 0;
-	let paintings = [
-		{
-			name:'painting1',
-			url:'image/17-587799.jpg',
-			win: { x: 3093, y: 1158 },
-		},{
-			name:'painting2',
-			url:'image/17-620545.jpg',
-			win: { x: 2255, y: 2388 },
-		},{
-			name:'painting3',
-			url:'image/17-620546.jpg',
-			win: { x: 2864, y: 2341 },
-		},{
-			name:'painting4',
-			url:'image/95-011771.jpg',
-			win: { x: 4091, y: 1330 },
-		},{
-			name:'painting5',
-			url:'image/95-020170.jpg',
-			win: { x: 3231, y: 2415 },
-		},{
-			name:'painting6',
-			url:'image/99-005006.jpg',
-			win: { x: 4800, y: 900 },
-		},
-	];
 
 	let renderer = new THREE.WebGLRenderer();
 	renderer.setSize( window.innerWidth, window.innerHeight );
@@ -57,60 +30,9 @@ window.onload = function () {
 
 	let scene = new THREE.Scene();
 	let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 100);
-	let textures = {};
-	let textureLoader = new THREE.TextureLoader();
-	let textureLoaded = 0;
-	let textureUrls = [
-		{ name:'sprite', url:'image/ant.png' },
-		{ name:'win', url:'image/what.png' },
-	];
-	paintings.forEach(item => {
-		textureUrls.push(item);
-	});
-	let textureCount = textureUrls.length;
-	textureUrls.forEach(item => {
-		textureLoader.load(item.url, data => loadedTexture(item.name, data));
-	})
-	let shaders = {};
-	let shaderLoader = new THREE.FileLoader();
-	let shaderLoaded = 0;
-	let shaderUrls = [
-		{ name:'buffer.frag', url:'shaders/buffer.frag' },
-		{ name:'buffer.vert', url:'shaders/buffer.vert' },
-		{ name:'sprite.frag', url:'shaders/sprite.frag' },
-		{ name:'sprite.vert', url:'shaders/sprite.vert' },
-		{ name:'screen.frag', url:'shaders/screen.frag' },
-		{ name:'screen.vert', url:'shaders/screen.vert' },
-		{ name:'map.frag', url:'shaders/map.frag' },
-		{ name:'map.vert', url:'shaders/map.vert' },
-	];
-	let shaderCount = shaderUrls.length;
-	shaderUrls.forEach(item => {
-		shaderLoader.load(item.url, data => loadedShader(item.name, data));
-	});
 	let uniforms;
 
-	function loadedTexture (key, data) {
-		textures[key] = data;
-		if (Object.keys(textures).length == textureCount && Object.keys(shaders).length == shaderCount) {
-			setup();
-		}
-	}
-
-	function loadedShader (key, data) {
-		shaders[key] = data;
-		if (Object.keys(textures).length == textureCount && Object.keys(shaders).length == shaderCount) {
-			setup();
-		}
-	}
-
-	function lerp(v0, v1, t) {
-		return v0*(1-t)+v1*t;
-	}
-
-	function closestPowerOfTwo (num) {
-		return Math.pow(2, Math.ceil(Math.log(num) / Math.log(2)));
-	}
+	load(setup);
 
 	function setupLevel () {
 		distanceTotal = 0;
@@ -123,12 +45,7 @@ window.onload = function () {
 		let key = paintings[currentPainting].name;
 
 		paintings[currentPainting].width = textures[key].image.width;
-		//closestPowerOfTwo(textures[key].image.width);
 		paintings[currentPainting].height = textures[key].image.height;
-		//closestPowerOfTwo(textures[key].image.height);
-		// console.log(paintings[currentPainting].height);
-		// textures[key].image.width = paintings[currentPainting].width;
-		// textures[key].image.height = paintings[currentPainting].height;
 
 		uniforms.uPainting.value = textures[key];
 		uniforms.uPaintingResolution.value[0] = paintings[currentPainting].width;
@@ -136,7 +53,7 @@ window.onload = function () {
 		uniforms.uWinPosition.value[0] = paintings[currentPainting].win.x;
 		uniforms.uWinPosition.value[1] = paintings[currentPainting].win.y;
 
-		frameBuffer.setSize(paintings[currentPainting].width/2, paintings[currentPainting].height/2);
+		frameBuffer.setSize(paintings[currentPainting].width/8, paintings[currentPainting].height/8);
 	}
 
 	function setup () {

@@ -18,10 +18,10 @@ void main(void)
 	vUv = uv;
 	
 	vec2 p = uv;
+	p.x *= uPaintingResolution.x/uPaintingResolution.y;
 	p -= uPosition / uPaintingResolution;
 	p *= rot(mix(mod(uRotation-PI2, TAU), 0., uPlayerWin));
 	p.x *= uResolution.y/uResolution.x;
-	p.x *= uPaintingResolution.x/uPaintingResolution.y;
 	p *= mix(uScale, 1.5, uPlayerWin);
 
 
